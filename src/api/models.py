@@ -6,6 +6,7 @@ db = SQLAlchemy()
 
 
 class User(db.Model):
+
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(80), unique=False, nullable=False)
@@ -69,18 +70,6 @@ class Episodes(db.Model):
 
 
 
-class FavoriteEpisodes(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    episodes_id = db.Column(db.Integer, ForeignKey("episodes.id"))
-    episode = db.relationship("Episodes", backref="favorite_episodes")
-
-    def __repr__(self):
-        return f"<Favorite Episodes {self.name}>"
-
-    def serialize(self):
-        return {"id": self.id, "air_date": self.air_date, "episode": self.episode}
-
-
 class FavoriteLocations(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     location_id = db.Column(db.Integer, ForeignKey("locations.id"))
@@ -136,3 +125,31 @@ class FavoriteCharacters(db.Model):
             "character": self.character.serialize()
 
         }
+    
+class FavoriteEpisodes(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    episode_id = db.Column(db.Integer, ForeignKey("episodes.id"))
+    user_id = db.Column(db.Integer, ForeignKey("user.id"))
+    user = db.relationship("User", backref="favorite_episodes")
+    episode = db.relationship("Episodes", backref="marked_as_favorite")
+
+    def __init__(self, user_id, episode_id):
+        self.episode_id = episode_id
+        self.user_id = user_id
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception as error:
+            db.session.rollback()
+            raise APIException(f"{error}", 500)
+
+    def __repr__(self):
+        return f"<Favorite Episodes {self.id}>"
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "episode": self.episode.serialize()
+
+        }
+
